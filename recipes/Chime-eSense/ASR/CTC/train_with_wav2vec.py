@@ -40,15 +40,15 @@ class ASR(sb.Brain):
         wavs, wav_lens = wavs.to(self.device), wav_lens.to(self.device)
 
         # Add augmentation if specified
-        if stage == sb.Stage.TRAIN:
-            if hasattr(self.modules, "env_corrupt"):
-                wavs_noise = self.modules.env_corrupt(wavs, wav_lens)
-                wavs = torch.cat([wavs, wavs_noise], dim=0)
-                wav_lens = torch.cat([wav_lens, wav_lens])
-                tokens_bos = torch.cat([tokens_bos, tokens_bos], dim=0)
+        # if stage == sb.Stage.TRAIN:
+        #     if hasattr(self.modules, "env_corrupt"):
+        #         wavs_noise = self.modules.env_corrupt(wavs, wav_lens)
+        #         wavs = torch.cat([wavs, wavs_noise], dim=0)
+        #         wav_lens = torch.cat([wav_lens, wav_lens])
+        #         tokens_bos = torch.cat([tokens_bos, tokens_bos], dim=0)
 
-            if hasattr(self.hparams, "augmentation"):
-                wavs = self.hparams.augmentation(wavs, wav_lens)
+        #     if hasattr(self.hparams, "augmentation"):
+        #         wavs = self.hparams.augmentation(wavs, wav_lens)
 
         # Forward pass
         feats = self.modules.wav2vec2(wavs)
@@ -73,13 +73,13 @@ class ASR(sb.Brain):
         tokens_eos, tokens_eos_lens = batch.tokens_eos
         tokens, tokens_lens = batch.tokens
 
-        if hasattr(self.modules, "env_corrupt") and stage == sb.Stage.TRAIN:
-            tokens_eos = torch.cat([tokens_eos, tokens_eos], dim=0)
-            tokens_eos_lens = torch.cat(
-                [tokens_eos_lens, tokens_eos_lens], dim=0
-            )
-            tokens = torch.cat([tokens, tokens], dim=0)
-            tokens_lens = torch.cat([tokens_lens, tokens_lens], dim=0)
+        # if hasattr(self.modules, "env_corrupt") and stage == sb.Stage.TRAIN:
+        #     tokens_eos = torch.cat([tokens_eos, tokens_eos], dim=0)
+        #     tokens_eos_lens = torch.cat(
+        #         [tokens_eos_lens, tokens_eos_lens], dim=0
+        #     )
+        #     tokens = torch.cat([tokens, tokens], dim=0)
+        #     tokens_lens = torch.cat([tokens_lens, tokens_lens], dim=0)
 
         loss_ctc = self.hparams.ctc_cost(p_ctc, tokens, wav_lens, tokens_lens)
         loss = loss_ctc
@@ -90,7 +90,7 @@ class ASR(sb.Brain):
                 "".join(self.tokenizer.decode_ndim(utt_seq)).split(" ")
                 for utt_seq in predicted_tokens
             ]
-            target_words = [wrd.split(" ") for wrd in batch.wrd]
+            target_words = [word.split(" ") for word in batch.words]
             self.wer_metric.append(ids, predicted_words, target_words)
             self.cer_metric.append(ids, predicted_words, target_words)
 
@@ -188,19 +188,19 @@ def dataio_prepare(hparams):
     It also defines the data processing pipeline through user-defined functions."""
     data_folder = hparams["data_folder"]
 
-    train_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
-        csv_path=hparams["train_csv"], replacements={"data_root": data_folder},
+    train_data = sb.dataio.dataset.DynamicItemDataset.from_json(
+        json_path=hparams["train_json"], replacements={"data_root": data_folder},
     )
 
     if hparams["sorting"] == "ascending":
         # we sort training data to speed up training and get better results.
-        train_data = train_data.filtered_sorted(sort_key="duration")
+        train_data = train_data.filtered_sorted(sort_key="length")
         # when sorting do not shuffle in dataloader ! otherwise is pointless
         hparams["train_dataloader_opts"]["shuffle"] = False
 
     elif hparams["sorting"] == "descending":
         train_data = train_data.filtered_sorted(
-            sort_key="duration", reverse=True
+            sort_key="length", reverse=True
         )
         # when sorting do not shuffle in dataloader ! otherwise is pointless
         hparams["train_dataloader_opts"]["shuffle"] = False
@@ -213,23 +213,29 @@ def dataio_prepare(hparams):
             "sorting must be random, ascending or descending"
         )
 
-    valid_data = sb.dataio.dataset.DynamicItemDataset.from_csv(
-        csv_path=hparams["valid_csv"], replacements={"data_root": data_folder},
+    valid_data = sb.dataio.dataset.DynamicItemDataset.from_json(
+        json_path=hparams["valid_json"], replacements={"data_root": data_folder},
     )
-    valid_data = valid_data.filtered_sorted(sort_key="duration")
+    valid_data = valid_data.filtered_sorted(sort_key="length")
 
     # test is separate
-    test_datasets = {}
-    for csv_file in hparams["test_csv"]:
-        name = Path(csv_file).stem
-        test_datasets[name] = sb.dataio.dataset.DynamicItemDataset.from_csv(
-            csv_path=csv_file, replacements={"data_root": data_folder}
-        )
-        test_datasets[name] = test_datasets[name].filtered_sorted(
-            sort_key="duration"
-        )
+    # test_datasets = {}
+    # for csv_file in hparams["test_csv"]:
+    #     name = Path(csv_file).stem
+    #     test_datasets[name] = sb.dataio.dataset.DynamicItemDataset.from_csv(
+    #         csv_path=csv_file, replacements={"data_root": data_folder}
+    #     )
+    #     test_datasets[name] = test_datasets[name].filtered_sorted(
+    #         sort_key="duration"
+    #     )
 
-    datasets = [train_data, valid_data] + [i for k, i in test_datasets.items()]
+    test_data = sb.dataio.dataset.DynamicItemDataset.from_json(
+        json_path=hparams["test_json"], replacements={"data_root": data_folder},
+    )
+    test_data = test_data.filtered_sorted(sort_key="length")
+
+    # datasets = [train_data, valid_data] + [i for k, i in test_datasets.items()]
+    datasets = [train_data, valid_data, test_data]
 
     # 2. Define audio pipeline:
     @sb.utils.data_pipeline.takes("wav")
@@ -242,13 +248,13 @@ def dataio_prepare(hparams):
     label_encoder = sb.dataio.encoder.CTCTextEncoder()
 
     # 3. Define text pipeline:
-    @sb.utils.data_pipeline.takes("wrd")
+    @sb.utils.data_pipeline.takes("words")
     @sb.utils.data_pipeline.provides(
-        "wrd", "char_list", "tokens_list", "tokens_bos", "tokens_eos", "tokens"
+        "words", "char_list", "tokens_list", "tokens_bos", "tokens_eos", "tokens"
     )
-    def text_pipeline(wrd):
-        yield wrd
-        char_list = list(wrd)
+    def text_pipeline(words):
+        yield words
+        char_list = list(words)
         yield char_list
         tokens_list = label_encoder.encode_sequence(char_list)
         yield tokens_list
@@ -261,15 +267,17 @@ def dataio_prepare(hparams):
 
     sb.dataio.dataset.add_dynamic_item(datasets, text_pipeline)
 
+    # This is path for the auto-generated index map.
     lab_enc_file = os.path.join(hparams["save_folder"], "label_encoder.txt")
+
     special_labels = {
         "bos_label": hparams["bos_index"],
         "eos_label": hparams["eos_index"],
         "blank_label": hparams["blank_index"],
     }
     label_encoder.load_or_create(
-        path=lab_enc_file,
-        from_didatasets=[train_data],
+        path=lab_enc_file, # store the generated indexing here
+        from_didatasets=[train_data], # based on training data
         output_key="char_list",
         special_labels=special_labels,
         sequence_input=True,
@@ -278,9 +286,9 @@ def dataio_prepare(hparams):
     # 4. Set output:
     sb.dataio.dataset.set_output_keys(
         datasets,
-        ["id", "sig", "wrd", "char_list", "tokens_bos", "tokens_eos", "tokens"],
+        ["id", "sig", "words", "char_list", "tokens_bos", "tokens_eos", "tokens"],
     )
-    return train_data, valid_data, test_datasets, label_encoder
+    return train_data, valid_data, test_data, label_encoder
 
 
 if __name__ == "__main__":
@@ -303,25 +311,21 @@ if __name__ == "__main__":
     )
 
     # Dataset prep (parsing Librispeech)
-    from librispeech_prepare import prepare_librispeech  # noqa
+    from chimeesense_prepare import prepare_chimeesense  # noqa
 
     # multi-gpu (ddp) save data preparation
     run_on_main(
-        prepare_librispeech,
+        prepare_chimeesense,
         kwargs={
             "data_folder": hparams["data_folder"],
-            "tr_splits": hparams["train_splits"],
-            "dev_splits": hparams["dev_splits"],
-            "te_splits": hparams["test_splits"],
-            "save_folder": hparams["output_folder"],
-            "merge_lst": hparams["train_splits"],
-            "merge_name": "train.csv",
-            "skip_prep": hparams["skip_prep"],
+            "save_json_train": hparams["train_json"],
+            "save_json_valid": hparams["valid_json"],
+            "save_json_test": hparams["test_json"]
         },
     )
 
     # here we create the datasets objects as well as tokenization and encoding
-    train_data, valid_data, test_datasets, label_encoder = dataio_prepare(
+    train_data, valid_data, test_data, label_encoder = dataio_prepare(
         hparams
     )
 
@@ -347,10 +351,18 @@ if __name__ == "__main__":
     )
 
     # Testing
-    for k in test_datasets.keys():  # keys are test_clean, test_other etc
-        asr_brain.hparams.wer_file = os.path.join(
-            hparams["output_folder"], "wer_{}.txt".format(k)
-        )
-        asr_brain.evaluate(
-            test_datasets[k], test_loader_kwargs=hparams["test_dataloader_opts"]
-        )
+    # for k in test_datasets.keys():  # keys are test_clean, test_other etc
+    #     asr_brain.hparams.wer_file = os.path.join(
+    #         hparams["output_folder"], "wer_{}.txt".format(k)
+    #     )
+    #     asr_brain.evaluate(
+    #         test_datasets[k], test_loader_kwargs=hparams["test_dataloader_opts"]
+    #     )
+    asr_brain.hparams.wer_file = os.path.join(
+        hparams["output_folder"], "wer.txt"
+    )
+    asr_brain.evaluate(
+        test_data, test_loader_kwargs=hparams["test_dataloader_opts"]
+    )
+
+    
