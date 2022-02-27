@@ -35,7 +35,8 @@ n_mels: 40
 hidden_size: 512
 dropout: 0.15
 bidirectional: True
-num_layers: 1
+num_layers: 4
+dnn_neurons: 512
 
 
 # Outputs

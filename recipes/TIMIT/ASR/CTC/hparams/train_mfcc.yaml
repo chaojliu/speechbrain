@@ -23,13 +23,17 @@ skip_prep: False # Skip data preparation
 # Training parameters
 number_of_epochs: 50
 batch_size: 8
-lr: 1.0
+lr: 0.1
 sorting: ascending # choose between ascending, descending and random
 
 # Feature parameters
 sample_rate: 16000
 n_fft: 400
-n_mels: 40
+n_mels: 46
+n_mfcc: 40
+deltas: False
+context: False
+
 
 # Model parameters
 activation: !name:torch.nn.LeakyReLU
