@@ -81,9 +81,12 @@ epoch_counter: !new:speechbrain.utils.epoch_loop.EpochCounter
     limit: !ref <number_of_epochs>
 
 compute_features: !new:speechbrain.lobes.features.MFCC
-    sample_rate: !ref <sample_rate>
-    n_fft: !ref <n_fft>
-    n_mels: !ref <n_mels>
+  sample_rate: 16000
+  n_fft: 400
+  n_mels: 46
+  n_mfcc: 40
+  deltas: false
+  context: false
 
 model: !new:speechbrain.lobes.models.CRDNN.CRDNN
     input_size: !ref <n_mels>
