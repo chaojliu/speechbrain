@@ -97,7 +97,8 @@ rnn_layers: 4
 rnn_neurons: 1024
 rnn_bidirectional: True
 dnn_blocks: 2
-dnn_neurons: 512
+# dnn_neurons: 512
+dnn_neurons: 1024
 emb_size: 128
 dec_neurons: 1024
 output_neurons: 31  # BPE by char size
@@ -174,7 +175,7 @@ enc: !new:speechbrain.lobes.models.VanillaNN.VanillaNN
    input_shape: [null, null, 1024]
    activation: !ref <activation>
    dnn_blocks: !ref <dnn_blocks>
-   dnn_neurons: 1024
+   dnn_neurons: !ref <dnn_neurons>
 
 emb: !new:speechbrain.nnet.embedding.Embedding
    num_embeddings: !ref <output_neurons>
