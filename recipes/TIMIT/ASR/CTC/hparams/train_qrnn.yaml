@@ -32,7 +32,7 @@ n_fft: 400
 n_mels: 40
 
 # Model parameters
-hidden_size: 512
+hidden_size: 256
 dropout: 0.15
 bidirectional: True
 num_layers: 4
