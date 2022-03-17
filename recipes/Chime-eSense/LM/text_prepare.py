@@ -186,11 +186,11 @@ def parse_wsj0_line(line):
 
 if __name__ == "__main__":
 
-    wsj0_folder = ""
-    esense_folder = "/Users/liu/Desktop/Modules/FYP/dataset/refined_data"
-    save_json_train = "/Users/liu/Desktop/Modules/FYP/dataset/refined_data/annotation/json/train.json"
-    save_json_valid = "/Users/liu/Desktop/Modules/FYP/dataset/refined_data/annotation/json/valid.json"
-    save_json_test = "/Users/liu/Desktop/Modules/FYP/dataset/refined_data/annotation/json/test.json"
+    wsj0_folder = "/data1/chaojliu/WSJ0"
+    esense_folder = "/home/chaojliu/refined_data"
+    save_json_train = "/home/chaojliu/speechbrain/recipes/Chime-eSense/LM/data/train.json"
+    save_json_valid = "/home/chaojliu/speechbrain/recipes/Chime-eSense/LM/data/valid.json"
+    save_json_test = "/home/chaojliu/speechbrain/recipes/Chime-eSense/LM/data/test.json"
 
     prepare_text(
         wsj0_folder, esense_folder, save_json_train, save_json_valid, save_json_test
