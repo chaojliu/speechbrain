@@ -16,7 +16,10 @@ train_log: !ref <output_folder>/train_log.txt
 # Data files
 # The data_folder is needed because we train the LM on the training
 # transcriptions of LibriSpeech as well.
-data_folder: !PLACEHOLDER # e.g, /localscratch/LibriSpeech
+# data_folder: !PLACEHOLDER # e.g, /localscratch/LibriSpeech
+
+wsj0_folder: "/data1/chaojliu/WSJ0"
+esense_folder: "/home/chaojliu/refined_data"
 
 # path to the lm_corpus
 # if set to null, it will automatically download from the internet
@@ -24,7 +27,7 @@ data_folder: !PLACEHOLDER # e.g, /localscratch/LibriSpeech
 lm_corpus_path: null
 
 # Tokenizer model
-tokenizer_file: https://www.dropbox.com/s/o7gnouwdoqchotj/1000_unigram.model?dl=1
+# tokenizer_file: https://www.dropbox.com/s/o7gnouwdoqchotj/1000_unigram.model?dl=1
 
 # Training parameters
 number_of_epochs: 20
