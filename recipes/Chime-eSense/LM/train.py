@@ -105,6 +105,7 @@ class LM(sb.core.Brain):
 def dataio_prepare(hparams):
     """grap all the .txt files for transcripts"""
     logging.info("generating datasets...")
+
     # data_folder = hparams["data_folder"]
     # train_transcripts = glob.glob(
     #     os.path.join(data_folder, "train*/**/*.trans.txt"), recursive=True
@@ -213,6 +214,17 @@ if __name__ == "__main__":
         experiment_directory=hparams["output_folder"],
         hyperparams_to_save=hparams_file,
         overrides=overrides,
+    )
+
+    run_on_main(
+        text_prepare,
+        kwargs={
+            "wsj0_folder": hparams["wsj0_folder"],
+            "esense_folder": hparams["esense_folder"],
+            "save_json_train": hparams["train_json"],
+            "save_json_valid": hparams["valid_json"],
+            "save_json_test": hparams["test_json"]
+        },
     )
 
     # here we create the dataloader objects as well as tokenization and encoding
