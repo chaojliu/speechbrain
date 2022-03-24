@@ -216,8 +216,11 @@ if __name__ == "__main__":
         overrides=overrides,
     )
 
+     # Dataset prep (parsing Librispeech)
+    from text_prepare import prepare_text  # noqa
+
     run_on_main(
-        text_prepare,
+        prepare_text,
         kwargs={
             "wsj0_folder": hparams["wsj0_folder"],
             "esense_folder": hparams["esense_folder"],
