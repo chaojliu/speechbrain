@@ -60,22 +60,21 @@ def prepare_text(
 
     # Train: WSJ0 F01 F02 F03 M02 M03 M04
     spkids = ["F01", "F02", "F03", "M02", "M03", "M04"]
-    acc = {} # DEBUG ONLY
-    json_dict = create_json_dict(spkids, raw_annotation_folder)
-    json_dict = create_wsj0_json_dict(wsj0_folder, acc, json_dict)
-    create_json(json_dict, save_json_train)
+    train_json_dict = create_json_dict(spkids, raw_annotation_folder)
+    train_json_dict = create_wsj0_json_dict(wsj0_folder, existing=train_json_dict)
+    create_json(train_json_dict, save_json_train)
 
     # Valid: F05 M05
     spkids = ["F05", "M05"]
-    json_dict = create_json_dict(spkids, raw_annotation_folder)
-    create_json(json_dict, save_json_valid)
+    valid_json_dict = create_json_dict(spkids, raw_annotation_folder)
+    create_json(valid_json_dict, save_json_valid)
 
     # Test:  F06 M06
     spkids = ["F06", "M06"]
-    json_dict = create_json_dict(spkids, raw_annotation_folder)
-    create_json(json_dict, save_json_test)
+    test_json_dict = create_json_dict(spkids, raw_annotation_folder)
+    create_json(test_json_dict, save_json_test)
 
-def create_wsj0_json_dict(wsj0_folder, acc, json_dict={}):
+def create_wsj0_json_dict(wsj0_folder, json_dict={}):
     text_lst = glob.glob(
         os.path.join(wsj0_folder, "**/**/**/**/*.dot"), recursive=True
     )
@@ -86,14 +85,15 @@ def create_wsj0_json_dict(wsj0_folder, acc, json_dict={}):
             for line in lines:
                 id, transcript = parse_wsj0_line(line)
 
-                transcript = normalize_wsj0_transcript(transcript, acc)
+                transcript = normalize_wsj0_transcript(transcript)
                 json_dict[id] = {
                     "words": transcript
                 }
     
     return json_dict
 
-def create_json_dict(spkids, raw_annotation_folder, json_dict={}):
+def create_json_dict(spkids, raw_annotation_folder):
+    json_dict = {}
     for spkid in spkids:
         spk_folder = os.path.join(raw_annotation_folder, spkid)
         text_lst = get_all_files(spk_folder, match_and=['.txt'])
@@ -140,13 +140,12 @@ def normalize_transcript(transcript):
     transcript = " ".join(transcript.split())
     return transcript
 
-def normalize_wsj0_transcript(transcript, acc):
+def normalize_wsj0_transcript(transcript):
 
     acceptable_escape = ["\%PERCENT", "\.POINT"] # To be further confirmed
 
     def escape_checker(token):
         if token.startswith('\\'):
-            acc[token] = True
             return (token in acceptable_escape)
         else: 
             return True    
