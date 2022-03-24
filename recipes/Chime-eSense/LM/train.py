@@ -159,21 +159,6 @@ def dataio_prepare(hparams):
 
     datasets = [train_data, valid_data, test_data]
 
-    label_encoder = sb.dataio.encoder.CTCTextEncoder()
-    lab_enc_file = hparams["label_encoder"] # "label_encoder.txt"
-    special_labels = {
-        "bos_label": hparams["bos_index"],
-        "eos_label": hparams["eos_index"],
-        "blank_label": hparams["blank_index"],
-    }
-    label_encoder.load_or_create(
-        path=lab_enc_file,
-        from_didatasets=[train_data],
-        output_key="char_list",
-        special_labels=special_labels,
-        sequence_input=True,
-    )
-
     # tokenizer = hparams["tokenizer"]
 
     """Define text pipeline"""
@@ -191,6 +176,21 @@ def dataio_prepare(hparams):
         yield tokens_eos
 
     sb.dataio.dataset.add_dynamic_item(datasets, text_pipeline)
+
+    label_encoder = sb.dataio.encoder.CTCTextEncoder()
+    lab_enc_file = hparams["label_encoder"] # "label_encoder.txt"
+    special_labels = {
+        "bos_label": hparams["bos_index"],
+        "eos_label": hparams["eos_index"],
+        "blank_label": hparams["blank_index"],
+    }
+    label_encoder.load_or_create(
+        path=lab_enc_file,
+        from_didatasets=[train_data],
+        output_key="char_list",
+        special_labels=special_labels,
+        sequence_input=True,
+    )
 
     # 4. Set output:
     sb.dataio.dataset.set_output_keys(
