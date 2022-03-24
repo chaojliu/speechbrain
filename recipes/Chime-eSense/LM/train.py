@@ -95,61 +95,95 @@ class LM(sb.core.Brain):
             self.checkpointer.save_and_keep_only(
                 meta=stage_stats, min_keys=["loss"],
             )
+        elif stage == sb.Stage.TEST:
+            self.hparams.train_logger.log_stats(
+                stats_meta={"Epoch loaded": self.hparams.epoch_counter.current},
+                test_stats=stage_stats,
+            )
 
 
 def dataio_prepare(hparams):
     """grap all the .txt files for transcripts"""
     logging.info("generating datasets...")
-    data_folder = hparams["data_folder"]
-    train_transcripts = glob.glob(
-        os.path.join(data_folder, "train*/**/*.trans.txt"), recursive=True
-    )
-    dev_transcripts = glob.glob(
-        os.path.join(data_folder, "dev*/**/*.trans.txt"), recursive=True
-    )
-    test_transcripts = glob.glob(
-        os.path.join(data_folder, "test*/**/*.trans.txt"), recursive=True
+    # data_folder = hparams["data_folder"]
+    # train_transcripts = glob.glob(
+    #     os.path.join(data_folder, "train*/**/*.trans.txt"), recursive=True
+    # )
+    # dev_transcripts = glob.glob(
+    #     os.path.join(data_folder, "dev*/**/*.trans.txt"), recursive=True
+    # )
+    # test_transcripts = glob.glob(
+    #     os.path.join(data_folder, "test*/**/*.trans.txt"), recursive=True
+    # )
+
+    # """prepare data and generate datasets"""
+    # datasets = load_dataset(
+    #     "dataset.py",
+    #     lm_corpus_path=hparams["lm_corpus_path"],
+    #     data_files={
+    #         "train": train_transcripts,
+    #         "dev": dev_transcripts,
+    #         "test": test_transcripts,
+    #     },
+    # )
+
+    # train_data, valid_data, test_data = (
+    #     datasets["train"],
+    #     datasets["dev"],
+    #     datasets["test"],
+    # )
+
+    # """convert huggingface's dataset to DynamicItemDataset via a magical function"""
+    # train_data = sb.dataio.dataset.DynamicItemDataset.from_arrow_dataset(
+    #     train_data
+    # )
+    # valid_data = sb.dataio.dataset.DynamicItemDataset.from_arrow_dataset(
+    #     valid_data
+    # )
+    # test_data = sb.dataio.dataset.DynamicItemDataset.from_arrow_dataset(
+    #     test_data
+    # )
+
+    train_data = sb.dataio.dataset.DynamicItemDataset.from_json(
+        json_path=hparams["save_json_train"]
     )
 
-    """prepare data and generate datasets"""
-    datasets = load_dataset(
-        "dataset.py",
-        lm_corpus_path=hparams["lm_corpus_path"],
-        data_files={
-            "train": train_transcripts,
-            "dev": dev_transcripts,
-            "test": test_transcripts,
-        },
+    valid_data = sb.dataio.dataset.DynamicItemDataset.from_json(
+        json_path=hparams["save_json_valid"]
     )
 
-    train_data, valid_data, test_data = (
-        datasets["train"],
-        datasets["dev"],
-        datasets["test"],
-    )
-
-    """convert huggingface's dataset to DynamicItemDataset via a magical function"""
-    train_data = sb.dataio.dataset.DynamicItemDataset.from_arrow_dataset(
-        train_data
-    )
-    valid_data = sb.dataio.dataset.DynamicItemDataset.from_arrow_dataset(
-        valid_data
-    )
-    test_data = sb.dataio.dataset.DynamicItemDataset.from_arrow_dataset(
-        test_data
+    test_data = sb.dataio.dataset.DynamicItemDataset.from_json(
+        json_path=hparams["save_json_test"]
     )
 
     datasets = [train_data, valid_data, test_data]
 
-    tokenizer = hparams["tokenizer"]
+    label_encoder = sb.dataio.encoder.CTCTextEncoder()
+    lab_enc_file = hparams["label_encoder"] # "label_encoder.txt"
+    special_labels = {
+        "bos_label": hparams["bos_index"],
+        "eos_label": hparams["eos_index"],
+        "blank_label": hparams["blank_index"],
+    }
+    label_encoder.load_or_create(
+        path=lab_enc_file,
+        from_didatasets=[train_data],
+        output_key="char_list",
+        special_labels=special_labels,
+        sequence_input=True,
+    )
+
+    # tokenizer = hparams["tokenizer"]
 
     """Define text pipeline"""
     # TODO: implement text augmentations pipelines
-    @sb.utils.data_pipeline.takes("text")
-    @sb.utils.data_pipeline.provides("text", "tokens_bos", "tokens_eos")
-    def text_pipeline(text):
-        yield text
-        tokens_list = tokenizer.encode_as_ids(text)
+    @sb.utils.data_pipeline.takes("words")
+    @sb.utils.data_pipeline.provides("words", "char_list", "tokens_bos", "tokens_eos")
+    def text_pipeline(words):
+        yield words
+        char_list = list(words)
+        yield char_list
+        tokens_list = label_encoder.encode_sequence(words)
         tokens_bos = torch.LongTensor([hparams["bos_index"]] + (tokens_list))
         yield tokens_bos
         tokens_eos = torch.LongTensor(tokens_list + [hparams["eos_index"]])
@@ -159,7 +193,7 @@ def dataio_prepare(hparams):
 
     # 4. Set output:
     sb.dataio.dataset.set_output_keys(
-        datasets, ["id", "text", "tokens_bos", "tokens_eos"],
+        datasets, ["id", "char_list", "words", "tokens_bos", "tokens_eos"],
     )
     return train_data, valid_data, test_data
 
@@ -186,8 +220,8 @@ if __name__ == "__main__":
 
     # We download the tokenizer from HuggingFace (or elsewhere depending on
     # the path given in the YAML file).
-    run_on_main(hparams["pretrainer"].collect_files)
-    hparams["pretrainer"].load_collected(device=run_opts["device"])
+    # run_on_main(hparams["pretrainer"].collect_files)
+    # hparams["pretrainer"].load_collected(device=run_opts["device"])
 
     lm_brain = LM(
         modules=hparams["modules"],

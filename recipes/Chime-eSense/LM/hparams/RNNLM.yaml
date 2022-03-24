@@ -18,8 +18,13 @@ train_log: !ref <output_folder>/train_log.txt
 # transcriptions of LibriSpeech as well.
 # data_folder: !PLACEHOLDER # e.g, /localscratch/LibriSpeech
 
-wsj0_folder: "/data1/chaojliu/WSJ0"
-esense_folder: "/home/chaojliu/refined_data"
+wsj0_folder: /data1/chaojliu/WSJ0
+esense_folder: /home/chaojliu/refined_data
+
+save_json_train: !ref <output_folder>/train.json
+save_json_valid: !ref <output_folder>/valid.json
+save_json_test: !ref <output_folder>/test.json
+label_encoder: !ref <output_folder>/label_encoder.txt
 
 # path to the lm_corpus
 # if set to null, it will automatically download from the internet
@@ -31,7 +36,7 @@ lm_corpus_path: null
 
 # Training parameters
 number_of_epochs: 20
-batch_size: 80
+batch_size: 40
 lr: 0.001
 accu_steps: 1 # Gradient accumulation to simulate large batch training
 ckpt_interval_minutes: 15 # save checkpoint every N min
@@ -57,10 +62,10 @@ dnn_blocks: 1
 dnn_neurons: 512
 
 # Outputs
-output_neurons: 1000 # index(blank/eos/bos) = 0
+output_neurons: 31 # index(blank/eos/bos) = 0
 blank_index: 0
-bos_index: 0
-eos_index: 0
+bos_index: 1
+eos_index: 2
 
 
 # Functions
@@ -106,11 +111,11 @@ compute_cost: !name:speechbrain.nnet.losses.nll_loss
 train_logger: !new:speechbrain.utils.train_logger.FileTrainLogger
     save_file: !ref <train_log>
 
-tokenizer: !new:sentencepiece.SentencePieceProcessor
+# tokenizer: !new:sentencepiece.SentencePieceProcessor
 
-pretrainer: !new:speechbrain.utils.parameter_transfer.Pretrainer
-    collect_in: !ref <save_folder>
-    loadables:
-        tokenizer: !ref <tokenizer>
-    paths:
-        tokenizer: !ref <tokenizer_file>
+# pretrainer: !new:speechbrain.utils.parameter_transfer.Pretrainer
+#     collect_in: !ref <save_folder>
+#     loadables:
+#         tokenizer: !ref <tokenizer>
+#     paths:
+#         tokenizer: !ref <tokenizer_file>
