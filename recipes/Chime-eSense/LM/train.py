@@ -224,9 +224,9 @@ if __name__ == "__main__":
         kwargs={
             "wsj0_folder": hparams["wsj0_folder"],
             "esense_folder": hparams["esense_folder"],
-            "save_json_train": hparams["train_json"],
-            "save_json_valid": hparams["valid_json"],
-            "save_json_test": hparams["test_json"]
+            "save_json_train": hparams["save_json_train"],
+            "save_json_valid": hparams["save_json_valid"],
+            "save_json_test": hparams["save_json_test"]
         },
     )
 
