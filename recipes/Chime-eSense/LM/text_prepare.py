@@ -61,7 +61,7 @@ def prepare_text(
     # Train: WSJ0 F01 F02 F03 M02 M03 M04
     spkids = ["F01", "F02", "F03", "M02", "M03", "M04"]
     train_json_dict = create_json_dict(spkids, raw_annotation_folder)
-    train_json_dict = create_wsj0_json_dict(wsj0_folder, existing=train_json_dict)
+    # train_json_dict = create_wsj0_json_dict(wsj0_folder, existing=train_json_dict)
     create_json(train_json_dict, save_json_train)
 
     # Valid: F05 M05
