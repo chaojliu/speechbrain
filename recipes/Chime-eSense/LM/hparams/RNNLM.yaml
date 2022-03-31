@@ -7,7 +7,7 @@
 # ############################################################################
 
 # Seed needs to be set at top of yaml, before objects with parameters are made
-seed: 2223
+seed: 2224
 __set_seed: !apply:torch.manual_seed [!ref <seed>]
 output_folder: !ref results/RNN/<seed>
 save_folder: !ref <output_folder>/save
@@ -35,7 +35,7 @@ lm_corpus_path: null
 # tokenizer_file: https://www.dropbox.com/s/o7gnouwdoqchotj/1000_unigram.model?dl=1
 
 # Training parameters
-number_of_epochs: 20
+number_of_epochs: 30
 batch_size: 40
 lr: 0.001
 accu_steps: 1 # Gradient accumulation to simulate large batch training

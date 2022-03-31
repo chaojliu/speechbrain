@@ -15,6 +15,7 @@ import re
 import json
 import glob
 import logging
+import random
 from speechbrain.utils.data_utils import get_all_files, download_file
 
 logger = logging.getLogger(__name__)
@@ -58,23 +59,32 @@ def prepare_text(
     # e.g. save_json_test = "/Users/liu/Desktop/Modules/FYP/dataset/refined_data/annotation/json/test.json"
     raw_annotation_folder = os.path.join(esense_folder, "raw_data")
 
-    # Train: WSJ0 F01 F02 F03 M02 M03 M04
-    spkids = ["F01", "F02", "F03", "M02", "M03", "M04"]
-    train_json_dict = create_json_dict(spkids, raw_annotation_folder)
-    # train_json_dict = create_wsj0_json_dict(wsj0_folder, existing=train_json_dict)
-    create_json(train_json_dict, save_json_train)
+    # Train: F01 F02 F03 M02 M03 M04
+    # spkids = ["F01", "F02", "F03", "M02", "M03", "M04"]
+    # train_json_dict = create_json_dict(spkids, raw_annotation_folder)
+    # create_json(train_json_dict, save_json_train)
 
     # Valid: F05 M05
-    spkids = ["F05", "M05"]
-    valid_json_dict = create_json_dict(spkids, raw_annotation_folder)
-    create_json(valid_json_dict, save_json_valid)
+    # spkids = ["F05", "M05"]
+    # valid_json_dict = create_json_dict(spkids, raw_annotation_folder)
+    # create_json(valid_json_dict, save_json_valid)
 
     # Test:  F06 M06
-    spkids = ["F06", "M06"]
-    test_json_dict = create_json_dict(spkids, raw_annotation_folder)
+    # spkids = ["F06", "M06"]
+    # test_json_dict = create_json_dict(spkids, raw_annotation_folder)
+    # create_json(test_json_dict, save_json_test)
+
+    train_json_dict, valid_json_dict, test_json_dict = create_wsj0_json_dict(wsj0_folder)
+
+    create_json(train_json_dict, save_json_train)
+    create_json(valid_json_dict, save_json_valid)
     create_json(test_json_dict, save_json_test)
 
-def create_wsj0_json_dict(wsj0_folder, json_dict={}):
+def create_wsj0_json_dict(wsj0_folder):
+    train_json_dict = {}
+    valid_json_dict = {}
+    test_json_dict = {}
+
     text_lst = glob.glob(
         os.path.join(wsj0_folder, "**/**/**/**/*.dot"), recursive=True
     )
@@ -86,11 +96,22 @@ def create_wsj0_json_dict(wsj0_folder, json_dict={}):
                 id, transcript = parse_wsj0_line(line)
 
                 transcript = normalize_wsj0_transcript(transcript)
-                json_dict[id] = {
-                    "words": transcript
-                }
+                sampler = random.randint(0, 99)
+                if sampler <= 79: 
+                    train_json_dict[id] = {
+                        "words": transcript
+                    }
+                elif sampler <= 89:
+                    valid_json_dict[id] = {
+                        "words": transcript
+                    }
+                else:
+                    test_json_dict[id] = {
+                        "words": transcript
+                    }
+
     
-    return json_dict
+    return train_json_dict, valid_json_dict, test_json_dict
 
 def create_json_dict(spkids, raw_annotation_folder):
     json_dict = {}
