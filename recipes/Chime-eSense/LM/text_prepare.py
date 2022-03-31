@@ -15,7 +15,6 @@ import re
 import json
 import glob
 import logging
-import random
 from speechbrain.utils.data_utils import get_all_files, download_file
 
 logger = logging.getLogger(__name__)
@@ -92,16 +91,17 @@ def create_wsj0_json_dict(wsj0_folder):
     for text in text_lst:
         with open(text, "r") as f:
             lines = f.readlines()
+            counter = 0
             for line in lines:
+                counter = counter + 1
                 id, transcript = parse_wsj0_line(line)
 
                 transcript = normalize_wsj0_transcript(transcript)
-                sampler = random.randint(0, 99)
-                if sampler <= 79: 
+                if counter % 10 <= 7: 
                     train_json_dict[id] = {
                         "words": transcript
                     }
-                elif sampler <= 89:
+                elif counter % 10 == 8:
                     valid_json_dict[id] = {
                         "words": transcript
                     }
