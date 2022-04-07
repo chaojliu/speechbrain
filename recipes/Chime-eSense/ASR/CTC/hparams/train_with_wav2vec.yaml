@@ -18,7 +18,7 @@ wav2vec2_hub: facebook/wav2vec2-large-960h-lv60-self
 # Data files
 # data_folder: !PLACEHOLDER # e,g./path/to/LibriSpeech
 # data_folder: /Users/liu/Desktop/Modules/FYP/dataset/refined_data
-data_folder: /home/chaojliu/refined_data
+data_folder: /data1/chaojliu/refined_data
 
 # noise/ris dataset will automatically be downloaded
 # data_folder_rirs: !ref <data_folder>
