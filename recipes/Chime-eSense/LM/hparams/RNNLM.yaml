@@ -19,7 +19,7 @@ train_log: !ref <output_folder>/train_log.txt
 # data_folder: !PLACEHOLDER # e.g, /localscratch/LibriSpeech
 
 wsj0_folder: /data1/chaojliu/WSJ0
-esense_folder: /home/chaojliu/refined_data
+esense_folder: /data1/chaojliu/refined_data
 
 save_json_train: !ref <output_folder>/train.json
 save_json_valid: !ref <output_folder>/valid.json

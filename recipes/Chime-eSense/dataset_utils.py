@@ -51,8 +51,7 @@ def segment_wav():
     output_folder = "/Users/liu/Desktop/Modules/FYP/dataset/refined_data/segmented"
 
     # selected speakers' recording will be segmented
-    spkids = ["F01", "F02", "F03", "F05", "F06", "M02", "M03", "M04", "M05", "M06"]
-    # spkids = ["F02", "F03", "F05", "F06", "M02", "M03", "M04", "M05", "M06"]
+    spkids = ["F01", "F02", "F03", "F04", "F05", "F06", "M01", "M02", "M03", "M04", "M05", "M06"]
     
 
     for spkid in spkids:
