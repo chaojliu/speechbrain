@@ -35,12 +35,7 @@ If you would like to train a full system from scratch do the following:
 
 
 Authors
- * Ju-Chieh Chou 2020
- * Mirco Ravanelli 2020
- * Abdel Heba 2020
- * Peter Plantinga 2020
- * Samuele Cornell 2020
- * Andreas Nautsch 2021
+ Liu Chaojie
 """
 
 import os
