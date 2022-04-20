@@ -207,6 +207,6 @@ if __name__ == "__main__":
     save_json_valid = "/home/chaojliu/valid.json"
     save_json_test = "/home/chaojliu/test.json"
 
-    prepare_chimeesense(
+    prepare_n20em(
         data_folder, save_json_train, save_json_valid, save_json_test
     )
