@@ -209,7 +209,6 @@ lm_rnn_neurons: 2048
 lm_dnn_blocks: 1
 lm_dnn_neurons: 512
 
-This is the RNNLM trained by WSJ0 text.
 # NB: It has to match the pre-trained RNNLM!!
 lm_model: !new:speechbrain.lobes.models.RNNLM.RNNLM
    output_neurons: !ref <output_neurons>
