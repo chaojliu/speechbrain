@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
-"""Recipe for training a Language Model with librispeech train-960 transcript and lm_corpus.
+"""Language Model with n20em transcripts.
 
 To run this recipe, do the following:
-> pip install datasets
 > python train.py hparams/<hparam_file>.yaml --data_folder <local_path_to_librispeech_dataset>
 
 Authors
- * Jianyuan Zhong 2021
- * Ju-Chieh Chou 2020
+Liu Chaojie
 """
 import os
 import sys
 import logging
 import glob
 import torch
-# from datasets import load_dataset
 from hyperpyyaml import load_hyperpyyaml
 import speechbrain as sb
 from speechbrain.utils.distributed import run_on_main
@@ -103,47 +100,10 @@ class LM(sb.core.Brain):
 
 
 def dataio_prepare(hparams):
-    """grap all the .txt files for transcripts"""
+    """
+    graps transcripts in train/valid/test json annotations.
+    """
     logging.info("generating datasets...")
-
-    # data_folder = hparams["data_folder"]
-    # train_transcripts = glob.glob(
-    #     os.path.join(data_folder, "train*/**/*.trans.txt"), recursive=True
-    # )
-    # dev_transcripts = glob.glob(
-    #     os.path.join(data_folder, "dev*/**/*.trans.txt"), recursive=True
-    # )
-    # test_transcripts = glob.glob(
-    #     os.path.join(data_folder, "test*/**/*.trans.txt"), recursive=True
-    # )
-
-    # """prepare data and generate datasets"""
-    # datasets = load_dataset(
-    #     "dataset.py",
-    #     lm_corpus_path=hparams["lm_corpus_path"],
-    #     data_files={
-    #         "train": train_transcripts,
-    #         "dev": dev_transcripts,
-    #         "test": test_transcripts,
-    #     },
-    # )
-
-    # train_data, valid_data, test_data = (
-    #     datasets["train"],
-    #     datasets["dev"],
-    #     datasets["test"],
-    # )
-
-    # """convert huggingface's dataset to DynamicItemDataset via a magical function"""
-    # train_data = sb.dataio.dataset.DynamicItemDataset.from_arrow_dataset(
-    #     train_data
-    # )
-    # valid_data = sb.dataio.dataset.DynamicItemDataset.from_arrow_dataset(
-    #     valid_data
-    # )
-    # test_data = sb.dataio.dataset.DynamicItemDataset.from_arrow_dataset(
-    #     test_data
-    # )
 
     train_data = sb.dataio.dataset.DynamicItemDataset.from_json(
         json_path=hparams["save_json_train"]
@@ -159,10 +119,7 @@ def dataio_prepare(hparams):
 
     datasets = [train_data, valid_data, test_data]
 
-    # tokenizer = hparams["tokenizer"]
-
     """Define text pipeline"""
-    # TODO: implement text augmentations pipelines
     @sb.utils.data_pipeline.takes("words")
     @sb.utils.data_pipeline.provides("words", "char_list", "tokens_bos", "tokens_eos")
     def text_pipeline(words):
@@ -216,14 +173,13 @@ if __name__ == "__main__":
         overrides=overrides,
     )
 
-     # Dataset prep (parsing Librispeech)
-    from text_prepare import prepare_text  # noqa
+    # Generates json annotations of n20em
+    from n20em_prepare import prepare_n20em 
 
     run_on_main(
-        prepare_text,
+        prepare_n20em,
         kwargs={
-            "wsj0_folder": hparams["wsj0_folder"],
-            "esense_folder": hparams["esense_folder"],
+            "data_folder": hparams["data_folder"],
             "save_json_train": hparams["save_json_train"],
             "save_json_valid": hparams["save_json_valid"],
             "save_json_test": hparams["save_json_test"]
@@ -232,11 +188,6 @@ if __name__ == "__main__":
 
     # here we create the dataloader objects as well as tokenization and encoding
     train_data, valid_data, test_data = dataio_prepare(hparams)
-
-    # We download the tokenizer from HuggingFace (or elsewhere depending on
-    # the path given in the YAML file).
-    # run_on_main(hparams["pretrainer"].collect_files)
-    # hparams["pretrainer"].load_collected(device=run_opts["device"])
 
     lm_brain = LM(
         modules=hparams["modules"],
