@@ -59,21 +59,8 @@ class ASR(sb.Brain):
         tokens_bos, _ = batch.tokens_bos
         wavs, wav_lens = wavs.to(self.device), wav_lens.to(self.device)
 
-        # Add augmentation if specified
-        # if stage == sb.Stage.TRAIN:
-        #     if hasattr(self.modules, "env_corrupt"):
-        #         wavs_noise = self.modules.env_corrupt(wavs, wav_lens)
-        #         wavs = torch.cat([wavs, wavs_noise], dim=0)
-        #         wav_lens = torch.cat([wav_lens, wav_lens])
-        #         tokens_bos = torch.cat([tokens_bos, tokens_bos], dim=0)
-
-        #     if hasattr(self.hparams, "augmentation"):
-        #         wavs = self.hparams.augmentation(wavs, wav_lens)
-
         # Forward pass
-        # feats = self.hparams.compute_features(wavs)
         feats = self.modules.wav2vec2(wavs)
-        # feats = self.modules.normalize(feats, wav_lens)
         x = self.modules.enc(feats)
         e_in = self.modules.emb(tokens_bos)  # y_in bos + tokens
         h, _ = self.modules.dec(e_in, x, wav_lens)
@@ -94,10 +81,14 @@ class ASR(sb.Brain):
                 return p_seq, wav_lens
         else:
             if stage == sb.Stage.VALID:
-                p_tokens, scores = self.hparams.valid_search(x, wav_lens)
+                self.modules.lm_model.to(self.device)
+                # p_tokens, scores = self.hparams.valid_search(x, wav_lens)
+                hyps, scores = self.hparams.greedy_searcher(x, wav_lens)
             else:
-                p_tokens, scores = self.hparams.test_search(x, wav_lens)
-            return p_seq, wav_lens, p_tokens
+                # p_tokens, scores = self.hparams.test_search(x, wav_lens)
+                self.modules.lm_model.to(self.device)
+                hyps, scores = self.hparams.beam_searcher(x, wav_lens)
+            return p_seq, wav_lens, hyps
 
     def compute_objectives(self, predictions, batch, stage):
         """Computes the loss (CTC+NLL) given predictions and targets."""
@@ -109,19 +100,11 @@ class ASR(sb.Brain):
             else:
                 p_seq, wav_lens = predictions
         else:
-            p_seq, wav_lens, predicted_tokens = predictions
+            p_seq, wav_lens, hyps = predictions
 
         ids = batch.id
         tokens_eos, tokens_eos_lens = batch.tokens_eos
         tokens, tokens_lens = batch.tokens
-
-        # if hasattr(self.modules, "env_corrupt") and stage == sb.Stage.TRAIN:
-        #     tokens_eos = torch.cat([tokens_eos, tokens_eos], dim=0)
-        #     tokens_eos_lens = torch.cat(
-        #         [tokens_eos_lens, tokens_eos_lens], dim=0
-        #     )
-        #     tokens = torch.cat([tokens, tokens], dim=0)
-        #     tokens_lens = torch.cat([tokens_lens, tokens_lens], dim=0)
 
         loss_seq = self.hparams.seq_cost(
             p_seq, tokens_eos, length=tokens_eos_lens
@@ -144,7 +127,7 @@ class ASR(sb.Brain):
             # Decode token terms to words
             predicted_words = [
                 "".join(self.tokenizer.decode_ndim(utt_seq)).split(" ")
-                for utt_seq in predicted_tokens
+                for utt_seq in hyps
             ]
             target_words = [word.split(" ") for word in batch.words]
             self.wer_metric.append(ids, predicted_words, target_words)
@@ -249,7 +232,7 @@ def dataio_prepare(hparams):
     data_folder = hparams["data_folder"]
 
     train_data = sb.dataio.dataset.DynamicItemDataset.from_json(
-        json_path=hparams["train_json"], replacements={"data_root": data_folder},
+        json_path=hparams["train_json"]
     )
 
     if hparams["sorting"] == "ascending":
@@ -274,7 +257,7 @@ def dataio_prepare(hparams):
         )
 
     valid_data = sb.dataio.dataset.DynamicItemDataset.from_json(
-        json_path=hparams["valid_json"], replacements={"data_root": data_folder},
+        json_path=hparams["valid_json"]
     )
     valid_data = valid_data.filtered_sorted(sort_key="length")
 
@@ -290,7 +273,7 @@ def dataio_prepare(hparams):
     #     )
 
     test_data = sb.dataio.dataset.DynamicItemDataset.from_json(
-        json_path=hparams["test_json"], replacements={"data_root": data_folder},
+        json_path=hparams["test_json"]
     )
     test_data = test_data.filtered_sorted(sort_key="length")
 
@@ -405,12 +388,12 @@ if __name__ == "__main__":
         overrides=overrides,
     )
 
-    # Dataset prep (parsing Librispeech)
-    from chimeesense_prepare import prepare_chimeesense  # noqa
+    # Generates n20em json annotation for speechbrain
+    from n20em_prepare import prepare_n20em
 
     # multi-gpu (ddp) save data preparation
     run_on_main(
-        prepare_chimeesense,
+        prepare_n20em,
         kwargs={
             "data_folder": hparams["data_folder"],
             "save_json_train": hparams["train_json"],
@@ -437,10 +420,8 @@ if __name__ == "__main__":
         valid_bsampler,
     ) = dataio_prepare(hparams)
 
-    # We download the pretrained LM from HuggingFace (or elsewhere depending on
-    # the path given in the YAML file). The tokenizer is loaded at the same time.
-    # run_on_main(hparams["pretrainer"].collect_files)
-    # hparams["pretrainer"].load_collected(device=run_opts["device"])
+    run_on_main(hparams["pretrainer"].collect_files)
+    hparams["pretrainer"].load_collected(device=run_opts["device"])
 
     # Trainer initialization
     asr_brain = ASR(
