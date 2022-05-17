@@ -1,38 +1,27 @@
 #!/usr/bin/env/python3
-"""Recipe for training a sequence-to-sequence ASR system with librispeech.
+"""
+A sequence-to-sequence ASR system with N20EM.
+
+In our experiments, the multi-modal model (audio + IMU) cannot improve the accuracy in significance.
+Consequently, we decide to deploy audio-only model for our music transcription system.
+Here is the training script for the audio-only model in our system.
+
 The system employs an encoder, a decoder, and an attention mechanism
 between them. Decoding is performed with beamsearch coupled with a neural
 language model.
 
-To run this recipe, do the following:
-> python train.py hparams/train_BPE1000.yaml
+To train this model, do the following:
+> python train_wav2vec_char_rnnlm.py hparams/train_wav2vec_char_rnnlm.yaml
 
-With the default hyperparameters, the system employs a CRDNN encoder.
-The decoder is based on a standard  GRU. Beamsearch coupled with a RNN
+The system employs a wav2vec2 + DNN encoder.
+The decoder is based on a standard GRU. Beamsearch coupled with a RNN
 language model is used  on the top of decoder probabilities.
 
 The neural network is trained on both CTC and negative-log likelihood
-targets and sub-word units estimated with Byte Pairwise Encoding (BPE)
-are used as basic recognition tokens. Training is performed on the full
-LibriSpeech dataset (960 h).
+targets and characters are used as basic recognition tokens. 
+Training is performed on the full N20EM dataset.
 
-The experiment file is flexible enough to support a large variety of
-different systems. By properly changing the parameter files, you can try
-different encoders, decoders, tokens (e.g, characters instead of BPE),
-training split (e.g, train-clean 100 rather than the full one), and many
-other possible variations.
-
-This recipe assumes that the tokenizer and the LM are already trained.
-To avoid token mismatches, the tokenizer used for the acoustic model is
-the same use for the LM.  The recipe downloads the pre-trained tokenizer
-and LM.
-
-If you would like to train a full system from scratch do the following:
-1- Train a tokenizer (see ../../Tokenizer)
-2- Train a language model (see ../../LM)
-3- Train the acoustic model (with this code).
-
-
+This recipe assumes that the LM are already pre-trained.
 
 Authors
  Liu Chaojie
@@ -166,7 +155,7 @@ class ASR(sb.Brain):
 
     def on_stage_end(self, stage, stage_loss, epoch):
         """Gets called at the end of a epoch."""
-        # Compute/store important stats
+        # Compute and store important stats
         stage_stats = {"loss": stage_loss}
         if stage == sb.Stage.TRAIN:
             self.train_stats = stage_stats
@@ -261,23 +250,11 @@ def dataio_prepare(hparams):
     )
     valid_data = valid_data.filtered_sorted(sort_key="length")
 
-    # test is separate
-    # test_datasets = {}
-    # for csv_file in hparams["test_csv"]:
-    #     name = Path(csv_file).stem
-    #     test_datasets[name] = sb.dataio.dataset.DynamicItemDataset.from_csv(
-    #         csv_path=csv_file, replacements={"data_root": data_folder}
-    #     )
-    #     test_datasets[name] = test_datasets[name].filtered_sorted(
-    #         sort_key="duration"
-    #     )
-
     test_data = sb.dataio.dataset.DynamicItemDataset.from_json(
         json_path=hparams["test_json"]
     )
     test_data = test_data.filtered_sorted(sort_key="length")
 
-    # datasets = [train_data, valid_data] + [i for k, i in test_datasets.items()]
     datasets = [train_data, valid_data, test_data]
 
     # 2. Define audio pipeline:
@@ -335,9 +312,9 @@ def dataio_prepare(hparams):
     train_batch_sampler = None
     valid_batch_sampler = None
     if hparams["dynamic_batching"]:
-        from speechbrain.dataio.sampler import DynamicBatchSampler  # noqa
-        from speechbrain.dataio.dataloader import SaveableDataLoader  # noqa
-        from speechbrain.dataio.batch import PaddedBatch  # noqa
+        from speechbrain.dataio.sampler import DynamicBatchSampler  
+        from speechbrain.dataio.dataloader import SaveableDataLoader  
+        from speechbrain.dataio.batch import PaddedBatch
 
         dynamic_hparams = hparams["dynamic_batch_sampler"]
         hop_size = dynamic_hparams["feats_hop_size"]
@@ -374,8 +351,6 @@ if __name__ == "__main__":
     # CLI:
     hparams_file, run_opts, overrides = sb.parse_arguments(sys.argv[1:])
 
-    # If distributed_launch=True then
-    # create ddp_group with the right communication protocol
     sb.utils.distributed.ddp_init_group(run_opts)
 
     with open(hparams_file) as fin:
@@ -401,15 +376,6 @@ if __name__ == "__main__":
             "save_json_test": hparams["test_json"]
         },
     )
-
-    # here we create the datasets objects as well as tokenization and encoding
-    # (
-    #     train_data,
-    #     valid_data,
-    #     test_datasets,
-    #     train_bsampler,
-    #     valid_bsampler,
-    # ) = dataio_prepare(hparams)
     
     (
         train_data,
@@ -431,9 +397,6 @@ if __name__ == "__main__":
         checkpointer=hparams["checkpointer"],
     )
 
-    # We dynamicaly add the tokenizer to our brain class.
-    # NB: This tokenizer corresponds to the one used for the LM!!
-    # asr_brain.tokenizer = hparams["tokenizer"]
     asr_brain.tokenizer = label_encoder
     train_dataloader_opts = hparams["train_dataloader_opts"]
     valid_dataloader_opts = hparams["valid_dataloader_opts"]
@@ -451,16 +414,8 @@ if __name__ == "__main__":
         train_loader_kwargs=train_dataloader_opts,
         valid_loader_kwargs=valid_dataloader_opts,
     )
-
-    # Testing
-    # for k in test_datasets.keys():  # keys are test_clean, test_other etc
-    #     asr_brain.hparams.wer_file = os.path.join(
-    #         hparams["output_folder"], "wer_{}.txt".format(k)
-    #     )
-    #     asr_brain.evaluate(
-    #         test_datasets[k], test_loader_kwargs=hparams["test_dataloader_opts"]
-    #     )
     
+    # Testing
     asr_brain.hparams.wer_file = os.path.join(
         hparams["output_folder"], "wer.txt"
     )

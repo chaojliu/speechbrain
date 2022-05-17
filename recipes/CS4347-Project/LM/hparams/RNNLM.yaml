@@ -15,17 +15,13 @@ train_log: !ref <output_folder>/train_log.txt
 
 # Data files
 # The data_folder is needed because we train the LM on the training transcriptions of N20EM.
-data_folder: /data1/chaojliu/n20em_utter
+data_folder: !PLACEHOLDER # e,g./data1/chaojliu/n20em_utter
+# data_folder: /data1/chaojliu/n20em_utter
 
 save_json_train: !ref <output_folder>/train.json
 save_json_valid: !ref <output_folder>/valid.json
 save_json_test: !ref <output_folder>/test.json
 label_encoder: !ref <output_folder>/label_encoder.txt
-
-# path to the lm_corpus
-# if set to null, it will automatically download from the internet
-# in the case when there is no internet access, set this to your local file
-lm_corpus_path: null
 
 # Training parameters
 number_of_epochs: 30

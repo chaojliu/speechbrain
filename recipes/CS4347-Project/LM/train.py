@@ -2,7 +2,7 @@
 """Language Model with n20em transcripts.
 
 To run this recipe, do the following:
-> python train.py hparams/<hparam_file>.yaml --data_folder <local_path_to_librispeech_dataset>
+> python train.py hparams/<hparam_file>.yaml --data_folder <local_path_to_n20em_utterance_dataset>
 
 Authors
 Liu Chaojie
@@ -162,8 +162,6 @@ if __name__ == "__main__":
     with open(hparams_file) as fin:
         hparams = load_hyperpyyaml(fin, overrides)
 
-    # If distributed_launch=True then
-    # create ddp_group with the right communication protocol
     sb.utils.distributed.ddp_init_group(run_opts)
 
     # Create experiment directory
